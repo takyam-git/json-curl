@@ -1,0 +1,3 @@
+URL=https://status.github.com/api.json
+METHOD=GET
+SAVE_RESPONSE=yes

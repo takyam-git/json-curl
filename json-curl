@@ -1,0 +1,71 @@
+#!/bin/bash
+
+SAVE_RESPONSE="no"
+
+while getopts sm:u: OPT
+do
+  case $OPT in
+    s) SAVE_RESPONSE="yes"
+      ;;
+    m) SPECIFIED_METHOD=$OPTARG
+      ;;
+    u) SPECIFIED_URL=$OPTARG
+      ;;
+  esac
+done
+
+shift $((OPTIND - 1))
+
+CURRENT_DIR=$(pwd);
+TARGET_FILE=$1;
+TARGET_PATH="${CURRENT_DIR}/${TARGET_FILE}";
+if [ ! -f $TARGET_PATH ]; then
+  echo "${TARGET_PATH} does not exists!!!";
+  exit 1;
+fi;
+
+TARGET_DIR_PATH=`dirname ${TARGET_PATH}`;
+META_PATH="${TARGET_DIR_PATH}/META";
+
+if [ ! -f $META_PATH ]; then
+  echo "${META_PATH} does not exists!!!";
+  exit 1;
+fi;
+
+source $META_PATH;
+
+if [ -n "${SPECIFIED_METHOD}" ]; then
+  METHOD=$SPECIFIED_METHOD;
+fi;
+
+if [ -n "${SPECIFIED_URL}" ]; then
+  URL=$SPECIFIED_URL;
+fi;
+
+if [ -z $URL ]; then
+  echo "URL is not defined in ${META_PATH} ( or empty argument -u )";
+  exit;
+fi;
+
+if [ -z $METHOD ]; then
+  echo "METHOD is not defined in ${META_PATH} ( or empty argument -m)";
+  exit;
+fi;
+
+response=$(curl -vlfs -X $METHOD -H "Content-Type: application/json" -d @$TARGET_PATH $URL)
+result=$?
+
+if [ $SAVE_RESPONSE = 'yes' ]; then
+  SAVE_DIR="${TARGET_DIR_PATH}/responses";
+  mkdir -p $SAVE_DIR;
+  NOW=$(date -u +"%Y-%m-%d_%H-%M-%S");
+  SAVE_PATH="${SAVE_DIR}/${NOW}.json";
+  echo $response > $SAVE_PATH;
+fi;
+
+if [ $result -eq 0 ]; then
+  echo $response | jq -C '.' | less -R
+else
+  echo $response;
+  exit 1;
+fi;
